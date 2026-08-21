@@ -1,0 +1,3 @@
+# Message Queue Mini-Prototype
+# RabbitMQ client for Python
+pika>=1.3.0,<2.0.0
