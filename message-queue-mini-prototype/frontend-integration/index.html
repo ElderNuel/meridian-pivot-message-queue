@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment 1 | Real-Time Message Queue</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; margin-bottom: 20px; }
+        .feed { background: #1e1e1e; color: #00ff00; padding: 20px; border-radius: 8px; width: 100%; max-width: 400px; height: 150px; overflow-y: auto; text-align: left; font-family: monospace; }
+        h2 { color: #333; margin-bottom: 20px; }
+        input[type="text"] { width: 90%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #007BFF; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        #status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Send to Message Queue</h2>
+    <input type="text" id="messageInput" placeholder="Enter your message here..." required>
+    <button onclick="sendMessage()">Publish to Queue</button>
+    <p id="status"></p>
+</div>
+
+<!-- New Live Feed Container -->
+<div class="feed" id="liveFeed">
+    <div>[System] Waiting for consumer to process messages...</div>
+</div>
+
+<script>
+    // --- 1. WebSocket Setup for Real-Time Listening ---
+    const ws = new WebSocket("ws://127.0.0.1:8000/ws");
+    const feed = document.getElementById("liveFeed");
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        const newMessage = document.createElement("div");
+        newMessage.innerText = `[Processed] ${data.message}`;
+        feed.appendChild(newMessage);
+        feed.scrollTop = feed.scrollHeight; // Auto-scroll to bottom
+    };
+
+    // --- 2. REST API Producer Setup ---
+    async function sendMessage() {
+        const message = document.getElementById("messageInput").value;
+        const statusText = document.getElementById("status");
+
+        if (!message) {
+            statusText.style.color = "red";
+            statusText.innerText = "Please enter a message.";
+            return;
+        }
+
+        statusText.style.color = "blue";
+        statusText.innerText = "Sending to broker...";
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/produce", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ payload: message })
+            });
+
+            if (response.ok) {
+                statusText.style.color = "green";
+                statusText.innerText = "Message queued successfully!";
+                document.getElementById("messageInput").value = ""; 
+            }
+        } catch (error) {
+            statusText.style.color = "red";
+            statusText.innerText = "Error connecting to the API.";
+        }
+    }
+</script>
+
+</body>
+</html>
